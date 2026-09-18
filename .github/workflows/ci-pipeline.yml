@@ -26,3 +26,23 @@ jobs:
 
       - name: Stop container
         run: docker stop test-container
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/ci-docker-projectnew || git clone https://github.com/devisri424/ci-docker-projectnew.git ~/ci-docker-projectnew
+            cd ~/ci-docker-projectnew
+            git pull origin main
+            docker stop ci-docker-container || true
+            docker rm ci-docker-container || true
+            docker build -t ci-docker-projectnew .
+            docker run -d -p 80:80 --name ci-docker-container ci-docker-projectnew
